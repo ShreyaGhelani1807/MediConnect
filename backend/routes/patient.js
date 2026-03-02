@@ -1,9 +1,14 @@
-// patient.js (change this comment per file)
 const express = require('express');
 const router = express.Router();
+const { getProfile, updateProfile, getAppointments } = require('../controllers/patientController');
+const { protect, restrictTo } = require('../middleware/authMiddleware');
 
-router.get('/ping', (req, res) => {
-  res.json({ message: 'patient route working' });
-});
+// All patient routes require login + patient role
+router.use(protect);
+router.use(restrictTo('patient'));
+
+router.get('/profile', getProfile);
+router.put('/profile', updateProfile);
+router.get('/appointments', getAppointments);
 
 module.exports = router;
