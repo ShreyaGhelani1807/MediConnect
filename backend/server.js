@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const errorHandler = require('./middleware/errorHandler');
 
 // Load environment variables
 dotenv.config();
@@ -37,3 +38,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`MediConnect server running on port ${PORT}`);
 });
+app.use(errorHandler);

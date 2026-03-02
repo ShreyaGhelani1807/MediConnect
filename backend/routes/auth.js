@@ -1,9 +1,13 @@
-// auth.js (change this comment per file)
 const express = require('express');
 const router = express.Router();
+const { register, login, getMe } = require('../controllers/authController');
+const { protect } = require('../middleware/authMiddleware');
 
-router.get('/ping', (req, res) => {
-  res.json({ message: 'auth route working' });
-});
+// Public routes
+router.post('/register', register);
+router.post('/login', login);
+
+// Protected route — requires valid JWT
+router.get('/me', protect, getMe);
 
 module.exports = router;
