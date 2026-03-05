@@ -1,9 +1,14 @@
-// doctors.js (change this comment per file)
 const express = require('express');
 const router = express.Router();
+const {
+  searchDoctors,
+  getDoctorById,
+  getDoctorSlots
+} = require('../controllers/doctorsController');
 
-router.get('/ping', (req, res) => {
-  res.json({ message: 'doctors route working' });
-});
+// All public routes — no auth required
+router.get('/search', searchDoctors);
+router.get('/:id/slots', getDoctorSlots);
+router.get('/:id', getDoctorById);
 
 module.exports = router;
