@@ -14,7 +14,9 @@ const analyzeSymptomsEndpoint = async (req, res) => {
 
     // Get patient profile for age and city context
     const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
+      where: {
+  id: String(req.user.userId)   // ← force String for MongoDB ObjectId
+},
       include: { patientProfile: true }
     });
 

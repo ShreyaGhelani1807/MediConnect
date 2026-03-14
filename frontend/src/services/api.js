@@ -74,3 +74,39 @@ export const appointmentAPI = {
 };
 
 export default api;
+
+// ─── Admin ────────────────────────────────────────────────
+export const adminAPI = {
+  login:         (data)         => adminApi.post('/admin/login', data),
+  getMe:         ()             => adminApi.get('/admin/me'),
+  getStats:      ()             => adminApi.get('/admin/stats'),
+  getDoctors:    (status)       => adminApi.get(`/admin/doctors${status ? `?status=${status}` : ''}`),
+  getDoctorById: (id)           => adminApi.get(`/admin/doctors/${id}`),
+  approveDoctor: (id)           => adminApi.patch(`/admin/doctors/${id}/approve`, {}),
+  rejectDoctor:  (id, reason)   => adminApi.patch(`/admin/doctors/${id}/reject`, { reason }),
+};
+// ─── Separate Admin Axios Instance (bypasses mediconnect_token interceptor) ──
+const adminApi = axios.create({
+  baseURL: BASE_URL,
+  headers: { 'Content-Type': 'application/json' }
+});
+
+// Auto-attach admin_token (not mediconnect_token)
+adminApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem('admin_token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Auto-handle 401 for admin
+adminApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
+      window.location.href = '/admin/login';
+    }
+    return Promise.reject(error);
+  }
+);

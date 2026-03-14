@@ -3,106 +3,17 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL")
 }
 
-model User {
-  id           Int       @id @default(autoincrement())
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  role         Role      @default(patient)
-  name         String
-  phone        String?
-  city         String?
-  createdAt    DateTime  @default(now()) @map("created_at")
-
-  patientProfile PatientProfile?
-  doctorProfile  DoctorProfile?
-
-  @@map("users")
-}
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
 
 enum Role {
   patient
   doctor
-}
-
-model PatientProfile {
-  id               Int     @id @default(autoincrement())
-  userId           Int     @unique @map("user_id")
-  age              Int?
-  gender           String?
-  bloodGroup       String? @map("blood_group")
-  medicalHistory   String? @map("medical_history")
-  emergencyContact String? @map("emergency_contact")
-  profilePhoto     String? @map("profile_photo")
-
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
-
-  @@map("patient_profiles")
-}
-
-model DoctorProfile {
-  id                  Int     @id @default(autoincrement())
-  userId              Int     @unique @map("user_id")
-  specialization      String
-  qualifications      String?
-  experienceYears     Int?    @map("experience_years")
-  consultationFee     Int?    @map("consultation_fee")
-  city                String?
-  clinicAddress       String? @map("clinic_address")
-  bio                 String?
-  profilePhoto        String? @map("profile_photo")
-  averageRating       Float   @default(0) @map("average_rating")
-  totalReviews        Int     @default(0) @map("total_reviews")
-  isAcceptingPatients Boolean @default(true) @map("is_accepting_patients")
-
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  timeSlots    TimeSlot[]
-  appointments Appointment[]
-  ratings      Rating[]
-
-  @@map("doctor_profiles")
-}
-
-model TimeSlot {
-  id                  Int     @id @default(autoincrement())
-  doctorId            Int     @map("doctor_id")
-  dayOfWeek           Int     @map("day_of_week") // 0=Sunday, 1=Monday ... 6=Saturday
-  startTime           String  @map("start_time")  // "09:00"
-  endTime             String  @map("end_time")    // "09:30"
-  isAvailable         Boolean @default(true) @map("is_available")
-  slotDurationMinutes Int     @default(30) @map("slot_duration_minutes")
-
-  doctor       DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
-
-  @@map("time_slots")
-}
-
-model Appointment {
-  id                     Int               @id @default(autoincrement())
-  patientId              Int               @map("patient_id")
-  doctorId               Int               @map("doctor_id")
-  appointmentDate        DateTime          @map("appointment_date")
-  timeSlotId             Int               @map("time_slot_id")
-  status                 AppointmentStatus @default(pending)
-  reasonForVisit         String?           @map("reason_for_visit")
-  aiSymptomAnalysis      Json?             @map("ai_symptom_analysis")
-  preConsultationChecklist Json?           @map("pre_consultation_checklist")
-  doctorNotes            String?           @map("doctor_notes")
-  createdAt              DateTime          @default(now()) @map("created_at")
-
-  patient  PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  doctor   DoctorProfile  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  timeSlot TimeSlot       @relation(fields: [timeSlotId], references: [id])
-  rating   Rating?
-
-  @@unique([doctorId, appointmentDate, timeSlotId]) // prevents double booking
-  @@map("appointments")
 }
 
 enum AppointmentStatus {
@@ -112,14 +23,152 @@ enum AppointmentStatus {
   cancelled
 }
 
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+// ─────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────
+
+model Admin {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  @@map("admins")
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(patient)
+  name         String
+  phone        String?
+  city         String?
+  createdAt    DateTime @default(now())
+
+  patientProfile PatientProfile?
+  doctorProfile  DoctorProfile?
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// PATIENT PROFILE
+// ─────────────────────────────────────────
+
+model PatientProfile {
+  id               String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String  @unique @db.ObjectId
+  age              Int?
+  gender           String?
+  bloodGroup       String?
+  medicalHistory   String?
+  emergencyContact String?
+  profilePhoto     String?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@map("patient_profiles")
+}
+
+// ─────────────────────────────────────────
+// DOCTOR PROFILE
+// ─────────────────────────────────────────
+
+model DoctorProfile {
+  id                  String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String             @unique @db.ObjectId
+  specialization      String
+  qualifications      String?
+  experienceYears     Int?
+  consultationFee     Int?
+  city                String?
+  clinicAddress       String?
+  bio                 String?
+  profilePhoto        String?
+  averageRating       Float              @default(0)
+  totalReviews        Int                @default(0)
+  isAcceptingPatients Boolean            @default(true)
+  verificationStatus  VerificationStatus @default(pending)
+  rejectionReason     String?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeSlots    TimeSlot[]
+  appointments Appointment[]
+  ratings      Rating[]
+
+  @@map("doctor_profiles")
+}
+
+// ─────────────────────────────────────────
+// TIME SLOT
+// ─────────────────────────────────────────
+
+model TimeSlot {
+  id                  String  @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId            String  @db.ObjectId
+  dayOfWeek           Int
+  startTime           String
+  endTime             String
+  isAvailable         Boolean @default(true)
+  slotDurationMinutes Int     @default(30)
+
+  doctor       DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@map("time_slots")
+}
+
+// ─────────────────────────────────────────
+// APPOINTMENT
+// ─────────────────────────────────────────
+
+model Appointment {
+  id                       String            @id @default(auto()) @map("_id") @db.ObjectId
+  patientId                String            @db.ObjectId
+  doctorId                 String            @db.ObjectId
+  appointmentDate          DateTime
+  timeSlotId               String            @db.ObjectId
+  status                   AppointmentStatus @default(pending)
+  reasonForVisit           String?
+  aiSymptomAnalysis        Json?
+  preConsultationChecklist Json?
+  doctorNotes              String?
+  createdAt                DateTime          @default(now())
+
+  patient  PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor   DoctorProfile  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  timeSlot TimeSlot       @relation(fields: [timeSlotId], references: [id])
+  rating   Rating?
+
+  @@unique([doctorId, appointmentDate, timeSlotId])
+  @@map("appointments")
+}
+
+// ─────────────────────────────────────────
+// RATING
+// ─────────────────────────────────────────
+
 model Rating {
-  id            Int      @id @default(autoincrement())
-  appointmentId Int      @unique @map("appointment_id")
-  patientId     Int      @map("patient_id")
-  doctorId      Int      @map("doctor_id")
-  rating        Int      // 1 to 5
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  appointmentId String   @unique @db.ObjectId
+  patientId     String   @db.ObjectId
+  doctorId      String   @db.ObjectId
+  rating        Int
   review        String?
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt     DateTime @default(now())
 
   appointment Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   doctor      DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
