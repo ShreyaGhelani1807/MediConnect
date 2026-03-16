@@ -4,6 +4,7 @@ const prisma    = require('../services/prismaClient');
 const bcrypt    = require('bcryptjs');
 const jwt       = require('jsonwebtoken');
 const adminAuth = require('../middleware/adminAuth');
+const { sendApprovalEmail, sendRejectionEmail } = require('../services/emailService');
 
 // POST /api/admin/login
 router.post('/login', async (req, res) => {
@@ -116,8 +117,10 @@ router.get('/doctors', adminAuth, async (req, res) => {
       consultationFee:    d.consultationFee,
       clinicAddress:      d.clinicAddress,
       verificationStatus: d.verificationStatus,
-      rejectionReason:    d.rejectionReason,
-      createdAt:          d.user.createdAt
+      rejectionReason: d.rejectionReason,
+      degreeImage: d.degreeImage,
+      createdAt: d.user.createdAt
+      
     }));
 
     res.json({
@@ -174,36 +177,59 @@ router.get('/doctors/:id', adminAuth, async (req, res) => {
 // PATCH /api/admin/doctors/:id/approve
 router.patch('/doctors/:id/approve', adminAuth, async (req, res) => {
   try {
-    const id = req.params.id;    // ← plain string
+    const id = req.params.id;
 
     const doctor = await prisma.doctorProfile.findUnique({
       where:   { id },
-      include: { user: { select: { name: true } } }
+      include: { user: { select: { id: true, name: true, email: true } } }
     });
 
     if (!doctor) return res.status(404).json({ error: 'Doctor not found' });
     if (doctor.verificationStatus === 'approved')
       return res.status(400).json({ error: 'Doctor is already approved' });
 
-    const updated = await prisma.doctorProfile.update({
+    // 1. Generate new mediconnect credentials
+    const mediconnectEmail = await generateMediconnectEmail(doctor.user.name, prisma);
+    const newPassword      = generatePassword();
+    const hashedPassword   = await bcrypt.hash(newPassword, 10);
+
+    // 2. Send approval email to their PERSONAL email (before we overwrite it)
+    const sendTo = doctor.personalEmail || doctor.user.email;
+    await sendApprovalEmail({
+      to:               sendTo,
+      doctorName:       doctor.user.name,
+      mediconnectEmail,
+      password:         newPassword
+    });
+
+    // 3. Update User — replace personal email with mediconnect email + new password
+    await prisma.user.update({
+      where: { id: doctor.userId },
+      data:  { email: mediconnectEmail, passwordHash: hashedPassword }
+    });
+
+    // 4. Update DoctorProfile — mark approved
+    await prisma.doctorProfile.update({
       where: { id },
       data:  { verificationStatus: 'approved', rejectionReason: null }
     });
 
     res.json({
-      message:            `Dr. ${doctor.user.name} has been approved`,
-      verificationStatus: updated.verificationStatus
+      message:          `Dr. ${doctor.user.name} approved. Credentials sent to ${sendTo}`,
+      mediconnectEmail,
+      verificationStatus: 'approved'
     });
+
   } catch (err) {
     console.error('Approve error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error during approval: ' + err.message });
   }
 });
 
 // PATCH /api/admin/doctors/:id/reject
 router.patch('/doctors/:id/reject', adminAuth, async (req, res) => {
   try {
-    const id = req.params.id;    // ← plain string
+    const id     = req.params.id;
     const { reason } = req.body;
 
     if (!reason || reason.trim().length < 10)
@@ -211,27 +237,72 @@ router.patch('/doctors/:id/reject', adminAuth, async (req, res) => {
 
     const doctor = await prisma.doctorProfile.findUnique({
       where:   { id },
-      include: { user: { select: { name: true } } }
+      include: { user: { select: { name: true, email: true } } }
     });
 
     if (!doctor) return res.status(404).json({ error: 'Doctor not found' });
     if (doctor.verificationStatus === 'rejected')
       return res.status(400).json({ error: 'Doctor is already rejected' });
 
-    const updated = await prisma.doctorProfile.update({
+    // Send rejection email to personal email
+    const sendTo = doctor.personalEmail || doctor.user.email;
+    await sendRejectionEmail({
+      to:         sendTo,
+      doctorName: doctor.user.name,
+      reason:     reason.trim()
+    });
+
+    await prisma.doctorProfile.update({
       where: { id },
       data:  { verificationStatus: 'rejected', rejectionReason: reason.trim() }
     });
 
     res.json({
-      message:            `Dr. ${doctor.user.name} has been rejected`,
-      verificationStatus: updated.verificationStatus,
-      rejectionReason:    updated.rejectionReason
+      message:            `Dr. ${doctor.user.name} rejected. Notification sent to ${sendTo}`,
+      verificationStatus: 'rejected',
+      rejectionReason:    reason.trim()
     });
+
   } catch (err) {
     console.error('Reject error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error during rejection: ' + err.message });
   }
 });
+
+// Helper — generate secure random password
+function generatePassword() {
+  const upper  = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+  const lower  = 'abcdefghjkmnpqrstuvwxyz';
+  const digits = '23456789';
+  const special = '@#$!';
+  const all = upper + lower + digits + special;
+
+  let pwd = '';
+  pwd += upper[Math.floor(Math.random() * upper.length)];
+  pwd += lower[Math.floor(Math.random() * lower.length)];
+  pwd += digits[Math.floor(Math.random() * digits.length)];
+  pwd += special[Math.floor(Math.random() * special.length)];
+  for (let i = 0; i < 6; i++) pwd += all[Math.floor(Math.random() * all.length)];
+
+  // Shuffle
+  return pwd.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+// Helper — generate unique mediconnect email from doctor's name
+async function generateMediconnectEmail(fullName, prisma) {
+  const parts     = fullName.toLowerCase().replace(/[^a-z\s]/g, '').trim().split(/\s+/);
+  const firstName = parts[0] || 'doctor';
+  const lastName  = parts[parts.length - 1] || 'mc';
+  let base        = `${firstName}.${lastName}@mediconnect.in`;
+  let email       = base;
+  let counter     = 1;
+
+  // Ensure uniqueness
+  while (await prisma.user.findUnique({ where: { email } })) {
+    email = `${firstName}.${lastName}${counter}@mediconnect.in`;
+    counter++;
+  }
+  return email;
+}
 
 module.exports = router;

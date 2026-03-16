@@ -119,6 +119,30 @@ function DoctorCard({ doc, index, onApprove, onReject, actionLoading }) {
             ))}
           </div>
 
+          {/* Degree Image */}
+{doc.degreeImage && (
+  <div style={{ marginTop: 14 }}>
+    <p style={{ margin: '0 0 8px', fontSize: 10, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      Degree Certificate
+    </p>
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <img
+        src={doc.degreeImage}
+        alt="Degree certificate"
+        style={{ height: 90, width: 'auto', maxWidth: '100%', borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(11,37,69,0.1)', cursor: 'pointer' }}
+        onClick={() => window.open(doc.degreeImage, '_blank')}
+        title="Click to view full size"
+      />
+      <div style={{
+        position: 'absolute', bottom: 4, right: 4,
+        background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '2px 6px'
+      }}>
+        <span style={{ fontSize: 9, color: '#fff', fontWeight: 700 }}>🔍 View</span>
+      </div>
+    </div>
+  </div>
+)}
+
           {/* Rejection reason */}
           {doc.rejectionReason && (
             <div style={{

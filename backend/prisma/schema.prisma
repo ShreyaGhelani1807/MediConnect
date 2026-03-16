@@ -103,6 +103,8 @@ model DoctorProfile {
   isAcceptingPatients Boolean            @default(true)
   verificationStatus  VerificationStatus @default(pending)
   rejectionReason     String?
+  degreeImage   String?
+  personalEmail String?
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   timeSlots    TimeSlot[]

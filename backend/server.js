@@ -23,7 +23,7 @@ app.use('/api/doctor',       require('./routes/doctor'));
 app.use('/api/doctors',      require('./routes/doctors'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/ai',           require('./routes/ai'));
-app.use('/api/admin',        require('./routes/admin'));   // ← NEW
+app.use('/api/admin',        require('./routes/admin'));  // ← NEW
 
 // ── 404 ────────────────────────────────────────────────────
 app.use((req, res) => {
