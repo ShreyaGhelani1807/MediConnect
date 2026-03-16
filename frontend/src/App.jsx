@@ -58,6 +58,14 @@ function Placeholder({ title }) {
         <div style={{ fontSize: 40, marginBottom: 12 }}>🚀</div>
         <p style={{ fontSize: 22, fontWeight: 900, color: '#0B2545', margin: '0 0 8px' }}>{title}</p>
         <p style={{ color: '#64748B', fontSize: 14 }}>Coming up next!</p>
+        {showSignout && (
+          <button 
+            onClick={logout}
+            style={{ marginTop: 16, padding: '10px 24px', background: '#0DC4A1', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 14 }}
+          >
+            Sign out
+          </button>
+        )}
       </div>
     </div>
   );
