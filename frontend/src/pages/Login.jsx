@@ -18,6 +18,7 @@ const P = {
 
 const ease = [0.22, 1, 0.36, 1];
 
+
 function Input({ icon: Icon, label, type = 'text', value, onChange, placeholder, error, suffix }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -67,6 +68,8 @@ export default function Login() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
   const [fieldErr, setFieldErr] = useState({});
+  const [pendingStatus, setPendingStatus]   = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     if (role === 'patient') { setEmail('testpatient@gmail.com'); setPassword('Test@123'); }
@@ -88,13 +91,102 @@ export default function Login() {
     setLoading(true); setError('');
     try {
       const user = await login(email, password);
-      navigate(user.role === 'doctor' ? '/doctor/dashboard' : '/dashboard');
+
+if (user.role === 'doctor') {
+  if (user.verificationStatus === 'pending') {
+    setPendingStatus('pending');
+    return;
+  }
+  if (user.verificationStatus === 'rejected') {
+    setPendingStatus('rejected');
+    setRejectionReason(user.rejectionReason || '');
+    return;
+  }
+  navigate('/doctor/dashboard');
+} else {
+  navigate('/dashboard');
+}
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  // Doctor status screen — shown instead of redirecting
+if (pendingStatus) {
+  return (
+    <div style={{ minHeight: '100vh', background: '#F0F7FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', padding: 16 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        style={{
+          maxWidth: 460, width: '100%', textAlign: 'center',
+          background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(24px)',
+          borderRadius: 24, padding: '48px 36px',
+          border: '1px solid rgba(255,255,255,0.9)',
+          boxShadow: '0 8px 40px rgba(11,37,69,0.08)'
+        }}
+      >
+        {pendingStatus === 'pending' ? (
+          <>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>🕐</div>
+            <h2 style={{ margin: '0 0 12px', fontSize: 20, fontWeight: 900, color: '#0B2545' }}>
+              Account Under Review
+            </h2>
+            <p style={{ margin: '0 0 24px', fontSize: 13, color: '#64748B', lineHeight: 1.7 }}>
+              Your doctor application is being reviewed by our admin team.
+              Approval takes up to <strong>12 hours</strong>.
+              You'll receive your new MediConnect credentials by email once approved.
+            </p>
+            <div style={{ background: 'rgba(13,196,161,0.06)', borderRadius: 12, padding: '16px', border: '1px solid rgba(13,196,161,0.2)', textAlign: 'left', marginBottom: 24 }}>
+              {[
+                '📧 Check your registered email for updates',
+                '⏱️ Typical review time: 2–12 hours',
+                '🔐 New login credentials will be emailed to you',
+              ].map(t => <p key={t} style={{ margin: '0 0 6px', fontSize: 12, color: '#374151' }}>{t}</p>)}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>❌</div>
+            <h2 style={{ margin: '0 0 12px', fontSize: 20, fontWeight: 900, color: '#0B2545' }}>
+              Application Rejected
+            </h2>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748B', lineHeight: 1.7 }}>
+              Unfortunately your application was not approved.
+            </p>
+            {rejectionReason && (
+              <div style={{ background: 'rgba(232,96,76,0.06)', borderRadius: 12, padding: '14px 16px', border: '1px solid rgba(232,96,76,0.2)', textAlign: 'left', marginBottom: 24 }}>
+                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#E8604C', textTransform: 'uppercase' }}>Reason</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#374151' }}>{rejectionReason}</p>
+              </div>
+            )}
+            <p style={{ margin: '0 0 24px', fontSize: 12, color: '#64748B' }}>
+              You may re-register with updated credentials and a valid degree certificate.
+            </p>
+          </>
+        )}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => setPendingStatus(null)} style={{
+            flex: 1, padding: '11px', borderRadius: 11,
+            border: '1.5px solid rgba(11,37,69,0.15)',
+            background: 'transparent', color: '#64748B',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter'
+          }}>← Back to Login</button>
+          {pendingStatus === 'rejected' && (
+            <Link to="/register" style={{
+              flex: 1, padding: '11px', borderRadius: 11, border: 'none',
+              background: 'linear-gradient(135deg, #0DC4A1, #0B9E82)',
+              color: '#fff', fontSize: 13, fontWeight: 700,
+              textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>Re-apply →</Link>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", minHeight: '100vh', display: 'flex', background: P.sky, overflow: 'hidden', position: 'relative' }}>
