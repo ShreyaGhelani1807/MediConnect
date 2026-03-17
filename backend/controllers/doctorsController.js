@@ -3,11 +3,19 @@ const prisma = require('../services/prismaClient');
 // GET /api/doctors/search
 const searchDoctors = async (req, res) => {
   try {
-    const { specialization, city, minRating, maxFee, sortBy = 'rating' } = req.query;
+    const { search, specialization, city, minRating, maxFee, sortBy = 'rating' } = req.query;
 
     const whereClause = {
       isAcceptingPatients: true,
       verificationStatus: 'approved',
+      ...(search && {
+        OR: [
+          { user: { name: { contains: search, mode: 'insensitive' } } },
+          { specialization: { contains: search, mode: 'insensitive' } },
+          { qualifications: { contains: search, mode: 'insensitive' } },
+          { city: { contains: search, mode: 'insensitive' } }
+        ]
+      }),
       ...(specialization && { specialization: { equals: specialization, mode: 'insensitive' } }),
       ...(city && { city: { equals: city, mode: 'insensitive' } }),
       ...(minRating && { averageRating: { gte: parseFloat(minRating) } }),

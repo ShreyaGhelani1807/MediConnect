@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { aiAPI } from '../services/api';
+import api, { aiAPI } from '../services/api';
+import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 import {
   Brain, Send, AlertTriangle, CheckCircle, ArrowRight,
   Zap, MapPin, Star, Clock, Phone, Calendar, RefreshCw,
-  Activity, Shield, ChevronRight
+  Activity, Shield, ChevronRight, X, FileText
 } from 'lucide-react';
 
 const P = {
@@ -20,10 +21,10 @@ const P = {
 };
 
 const URGENCY = {
-  routine:   { color: P.emerald, bg: '#ECFDF5', label: 'Routine',   note: 'Book within a week'  },
-  soon:      { color: P.amber,   bg: '#FFFBEB', label: 'Soon',      note: 'Book in 2–3 days'    },
-  urgent:    { color: P.coral,   bg: '#FEF2F0', label: 'Urgent',    note: 'See a doctor today'  },
-  emergency: { color: '#DC2626', bg: '#FFF0F0', label: 'Emergency', note: 'Go to ER immediately'},
+  routine: { color: P.emerald, bg: '#ECFDF5', label: 'Routine', note: 'Book within a week' },
+  soon: { color: P.amber, bg: '#FFFBEB', label: 'Soon', note: 'Book in 2–3 days' },
+  urgent: { color: P.coral, bg: '#FEF2F0', label: 'Urgent', note: 'See a doctor today' },
+  emergency: { color: '#DC2626', bg: '#FFF0F0', label: 'Emergency', note: 'Go to ER immediately' },
 };
 
 const EXAMPLE_SYMPTOMS = [
@@ -80,26 +81,30 @@ function AnalyzingState() {
 
 /* ── Doctor Card ── */
 function DoctorCard({ doc, i, onBook }) {
+  const doctorName = doc.name || doc.user?.name || 'Doctor';
+  const doctorSpecialization = doc.specialization || 'General Physician';
+  const doctorExperience = doc.experienceYears || doc.yearsOfExperience;
+  const doctorClinic = doc.clinicAddress || doc.hospital;
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
       style={{ background: P.white, borderRadius: 18, padding: '20px', border: `1px solid ${P.border}`, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
         <div style={{ width: 48, height: 48, borderRadius: 15, background: `linear-gradient(135deg, ${P.navy}, ${P.navyLt})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: 'white', flexShrink: 0 }}>
-          {doc.user?.name?.[0] || 'D'}
+          {doctorName[0] || 'D'}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 15, fontWeight: 800, color: P.ink, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.user?.name}</p>
-          <p style={{ fontSize: 13, color: P.teal, fontWeight: 600, margin: '0 0 4px' }}>{doc.specialization}</p>
+          <p style={{ fontSize: 15, fontWeight: 800, color: P.ink, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doctorName}</p>
+          <p style={{ fontSize: 13, color: P.teal, fontWeight: 600, margin: '0 0 4px' }}>Specialization: {doctorSpecialization}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Star size={12} fill={P.amber} color={P.amber} />
               <span style={{ fontSize: 12, fontWeight: 700, color: P.sub }}>{doc.averageRating?.toFixed(1) || 'New'}</span>
             </div>
             <span style={{ fontSize: 12, color: P.muted }}>·</span>
-            <span style={{ fontSize: 12, color: P.muted }}>{doc.yearsOfExperience} yrs exp</span>
+            <span style={{ fontSize: 12, color: P.muted }}>{doctorExperience || '0'} yrs exp</span>
             <span style={{ fontSize: 12, color: P.muted }}>·</span>
             <span style={{ fontSize: 12, color: P.muted, display: 'flex', alignItems: 'center', gap: 3 }}>
-              <MapPin size={10} />{doc.city}
+              <MapPin size={10} />{doc.city || 'N/A'}
             </span>
           </div>
         </div>
@@ -108,10 +113,10 @@ function DoctorCard({ doc, i, onBook }) {
           <p style={{ fontSize: 11, color: P.muted }}>per visit</p>
         </div>
       </div>
-      {doc.hospital && (
+      {doctorClinic && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14, padding: '8px 12px', borderRadius: 10, background: P.sky }}>
           <Activity size={12} color={P.sub} />
-          <span style={{ fontSize: 12, color: P.sub, fontWeight: 500 }}>{doc.hospital}</span>
+          <span style={{ fontSize: 12, color: P.sub, fontWeight: 500 }}>{doctorClinic}</span>
         </div>
       )}
       <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -123,13 +128,138 @@ function DoctorCard({ doc, i, onBook }) {
   );
 }
 
+/* ── Booking Modal ── */
+function BookingModal({ doctor, analysisResult, onClose }) {
+  const [date, setDate] = useState('');
+  const [title, setTitle] = useState('');
+  const [slots, setSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState('');
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (!date) {
+      setSlots([]);
+      return;
+    }
+    const fetchSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        const res = await api.get(`/doctors/${doctor.id}/slots`, { params: { date } });
+        setSlots(res.data.availableSlots || []);
+      } catch (e) {
+        setSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+    fetchSlots();
+  }, [date, doctor.id]);
+
+  const handleBook = async () => {
+    if (!date || !selectedSlot) {
+      setErr('Please select a date and an available time slot.');
+      return;
+    }
+    setBooking(true); setErr('');
+    try {
+      await api.post('/appointments/book', {
+        doctorId: doctor.id,
+        appointmentDate: date,
+        timeSlotId: selectedSlot,
+        reasonForVisit: title || 'Symptom Analysis Checkup',
+        aiSymptomAnalysis: analysisResult?.aiAnalysis || null
+      });
+      toast.success('Appointment booked successfully!');
+      onClose();
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Failed to book appointment.');
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,37,69,0.5)', backdropFilter: 'blur(6px)' }}>
+      <motion.div initial={{ opacity: 0, y: 30, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
+        style={{ width: '100%', maxWidth: 440, background: P.white, borderRadius: 24, padding: '32px', boxShadow: '0 24px 48px rgba(0,0,0,0.15)', position: 'relative' }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: P.sub }}>
+          <X size={16} />
+        </button>
+
+        <h2 style={{ fontSize: 22, fontWeight: 900, color: P.ink, margin: '0 0 4px', letterSpacing: '-0.5px' }}>Book Appointment</h2>
+        <p style={{ fontSize: 13, color: P.sub, margin: '0 0 24px' }}>with Dr. {doctor.name || doctor.user?.name}</p>
+
+        {err && (
+          <div style={{ padding: '12px', borderRadius: 12, background: '#FFF0F0', color: P.error, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <AlertTriangle size={14} /> {err}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+          {/* Title input */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: P.muted, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <FileText size={13} /> Reason for Visit (Title)
+            </label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Follow-up, Routine checkup"
+              style={{ width: '100%', padding: '12px 16px', borderRadius: 14, border: `1px solid ${P.border}`, background: P.sky, outline: 'none', fontSize: 14, color: P.ink, fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Date Picker */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: P.muted, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <Calendar size={13} /> Select Date *
+            </label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().split('T')[0]}
+              style={{ width: '100%', padding: '12px 16px', borderRadius: 14, border: `1px solid ${P.border}`, background: P.sky, outline: 'none', fontSize: 14, color: P.ink, fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Time Slot Picker */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: P.muted, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <Clock size={13} /> Available Time *
+            </label>
+            {!date ? (
+              <p style={{ fontSize: 13, color: P.muted, margin: 0, padding: '10px 0' }}>Please select a date first.</p>
+            ) : loadingSlots ? (
+              <p style={{ fontSize: 13, color: P.teal, margin: 0, padding: '10px 0', fontWeight: 600 }}>Loading slots...</p>
+            ) : slots.length === 0 ? (
+              <p style={{ fontSize: 13, color: P.error, margin: 0, padding: '10px 0', fontWeight: 600 }}>No availability on this date.</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {slots.map(s => (
+                  <button key={s.id} onClick={() => setSelectedSlot(s.id)} disabled={s.isBooked === true}
+                    style={{ padding: '10px', borderRadius: 12, fontSize: 13, fontWeight: selectedSlot === s.id ? 800 : 600, border: selectedSlot === s.id ? `2px solid ${P.teal}` : `1px solid ${P.border}`, background: s.isBooked === true ? 'rgba(0,0,0,0.04)' : selectedSlot === s.id ? `${P.teal}15` : P.sky, color: s.isBooked === true ? P.muted : selectedSlot === s.id ? P.tealDk : P.ink, cursor: s.isBooked === true ? 'not-allowed' : 'pointer', transition: 'all 0.2s', opacity: s.isBooked === true ? 0.6 : 1 }}>
+                    {s.startTime}{s.isBooked === true && ' (Booked)'}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <motion.button whileHover={!booking ? { scale: 1.02 } : {}} whileTap={!booking ? { scale: 0.98 } : {}} onClick={handleBook} disabled={booking}
+          style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: `linear-gradient(135deg, ${P.teal}, ${P.tealDk})`, color: 'white', fontWeight: 800, fontSize: 14, cursor: booking ? 'wait' : 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 20px rgba(13,196,161,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          {booking ? 'Confirming...' : 'Confirm Appointment'}
+          {!booking && <ArrowRight size={15} />}
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ── Main Component ── */
 export default function SymptomAnalysis() {
   const navigate = useNavigate();
   const [symptoms, setSymptoms] = useState('');
-  const [phase,    setPhase]    = useState('input');   // input | analyzing | result | emergency
-  const [result,   setResult]   = useState(null);
-  const [error,    setError]    = useState('');
+  const [phase, setPhase] = useState('input');   // input | analyzing | result | emergency
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
+  const [bookingDoctor, setBookingDoctor] = useState(null);
 
   const handleAnalyze = async () => {
     if (!symptoms.trim() || symptoms.trim().length < 10) {
@@ -141,7 +271,7 @@ export default function SymptomAnalysis() {
       const res = await aiAPI.analyzeSymptoms({ symptoms });
       const data = res.data;
       if (data.isEmergency) { setResult(data); setPhase('emergency'); }
-      else                   { setResult(data); setPhase('result'); }
+      else { setResult(data); setPhase('result'); }
     } catch (err) {
       setError(err.response?.data?.message || 'Analysis failed. Please try again.');
       setPhase('input');
@@ -150,7 +280,8 @@ export default function SymptomAnalysis() {
 
   const handleReset = () => { setSymptoms(''); setPhase('input'); setResult(null); setError(''); };
 
-  const urg = result?.analysis?.urgency_level || 'routine';
+  const analysis = result?.aiAnalysis || result?.analysis || {};
+  const urg = analysis?.urgency?.level || analysis?.urgency_level || 'routine';
   const urgStyle = URGENCY[urg] || URGENCY.routine;
 
   return (
@@ -278,19 +409,19 @@ export default function SymptomAnalysis() {
                 <div style={{ background: P.sky, borderRadius: 16, padding: '18px 20px', marginBottom: 20 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: P.muted, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>Recommended Specialist</p>
                   <p style={{ fontSize: 24, fontWeight: 900, color: P.ink, letterSpacing: '-0.8px', margin: '0 0 6px' }}>
-                    {result.analysis?.recommended_specialist || result.analysis?.doctor_search_query?.primary_specialization}
+                    {analysis?.primary_recommendation?.specialization || analysis?.recommended_specialist || analysis?.doctor_search_query?.primary_specialization}
                   </p>
                   <p style={{ fontSize: 13, color: P.sub, margin: 0, lineHeight: 1.6 }}>
-                    {result.analysis?.reasoning}
+                    {analysis?.primary_recommendation?.reasoning || analysis?.reasoning}
                   </p>
                 </div>
 
                 {/* Red flags */}
-                {result.analysis?.red_flags?.length > 0 && (
+                {analysis?.red_flags?.length > 0 && (
                   <div style={{ marginBottom: 20 }}>
                     <p style={{ fontSize: 12, fontWeight: 700, color: P.muted, textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 10px' }}>Red Flags Detected</p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {result.analysis.red_flags.map(f => (
+                      {analysis.red_flags.map(f => (
                         <span key={f} style={{ fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 8, background: 'rgba(232,96,76,0.06)', color: P.coral, border: `1px solid ${P.coral}15` }}>⚠ {f}</span>
                       ))}
                     </div>
@@ -303,10 +434,10 @@ export default function SymptomAnalysis() {
                     <p style={{ fontSize: 12, color: P.muted, margin: '0 0 4px', fontWeight: 600 }}>AI Confidence</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 100, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${result.analysis?.confidence_score || 85}%` }} transition={{ duration: 0.8 }}
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${analysis?.primary_recommendation?.confidence === 'high' ? 90 : analysis?.primary_recommendation?.confidence === 'medium' ? 75 : analysis?.confidence_score || 85}%` }} transition={{ duration: 0.8 }}
                           style={{ height: '100%', background: `linear-gradient(90deg, ${P.teal}, ${P.tealDk})`, borderRadius: 3 }} />
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>{result.analysis?.confidence_score || 85}%</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>{analysis?.primary_recommendation?.confidence ? analysis.primary_recommendation.confidence.toUpperCase() : `${analysis?.confidence_score || 85}%`}</span>
                     </div>
                   </div>
                   <button onClick={handleReset}
@@ -340,9 +471,9 @@ export default function SymptomAnalysis() {
           {/* Doctor cards */}
           {phase === 'result' && result?.doctors?.length > 0
             ? result.doctors.map((doc, i) => (
-                <DoctorCard key={doc.id} doc={doc} i={i}
-                  onBook={doc => navigate(`/doctors/${doc.id}/book`, { state: { analysisResult: result } })} />
-              ))
+              <DoctorCard key={doc.id} doc={doc} i={i}
+                onBook={doc => setBookingDoctor(doc)} />
+            ))
             : phase === 'result' && result?.doctors?.length === 0
               ? (
                 <div style={{ background: P.white, borderRadius: 20, padding: '28px 20px', border: `1px solid ${P.border}`, textAlign: 'center' }}>
@@ -377,6 +508,16 @@ export default function SymptomAnalysis() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {bookingDoctor && (
+          <BookingModal
+            doctor={bookingDoctor}
+            analysisResult={result}
+            onClose={() => setBookingDoctor(null)}
+          />
+        )}
+      </AnimatePresence>
     </Layout>
   );
 }

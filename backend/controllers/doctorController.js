@@ -162,17 +162,17 @@ const getTodayAppointments = async (req, res) => {
       status: apt.status,
       reasonForVisit: apt.reasonForVisit,
       aiSymptomAnalysis: apt.aiSymptomAnalysis,
-      timeSlot: {
+      timeSlot: apt.timeSlot ? {
         startTime: apt.timeSlot.startTime,
         endTime: apt.timeSlot.endTime
-      },
-      patient: {
+      } : null,
+      patient: apt.patient ? {
         id: apt.patient.id,
-        name: apt.patient.user.name,
+        name: apt.patient.user?.name || 'Unknown',
         age: apt.patient.age,
         gender: apt.patient.gender,
-        phone: apt.patient.user.phone
-      }
+        phone: apt.patient.user?.phone || ''
+      } : null
     }));
 
     res.json({ appointments: formatted });
@@ -210,16 +210,16 @@ const getAllAppointments = async (req, res) => {
       status: apt.status,
       reasonForVisit: apt.reasonForVisit,
       doctorNotes: apt.doctorNotes,
-      timeSlot: {
+      timeSlot: apt.timeSlot ? {
         startTime: apt.timeSlot.startTime,
         endTime: apt.timeSlot.endTime
-      },
-      patient: {
+      } : null,
+      patient: apt.patient ? {
         id: apt.patient.id,
-        name: apt.patient.user.name,
+        name: apt.patient.user?.name || 'Unknown',
         age: apt.patient.age,
         gender: apt.patient.gender
-      },
+      } : null,
       rating: apt.rating || null
     }));
 
@@ -235,7 +235,7 @@ const getAllAppointments = async (req, res) => {
 const getPatientById = async (req, res) => {
   try {
     const patientProfile = await prisma.patientProfile.findUnique({
-      where: { id: parseInt(req.params.id) },
+      where: { id: req.params.id },
       include: {
         user: true,
         appointments: {
