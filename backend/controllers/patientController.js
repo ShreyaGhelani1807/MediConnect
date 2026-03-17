@@ -103,18 +103,18 @@ const getAppointments = async (req, res) => {
       preConsultationChecklist: apt.preConsultationChecklist,
       doctorNotes: apt.doctorNotes,
       createdAt: apt.createdAt,
-      timeSlot: {
+      timeSlot: apt.timeSlot ? {
         startTime: apt.timeSlot.startTime,
         endTime: apt.timeSlot.endTime
-      },
-      doctor: {
+      } : null,
+      doctor: apt.doctor ? {
         id: apt.doctor.id,
-        name: apt.doctor.user.name,
+        name: apt.doctor.user?.name || 'Unknown',
         specialization: apt.doctor.specialization,
         consultationFee: apt.doctor.consultationFee,
         city: apt.doctor.city,
         profilePhoto: apt.doctor.profilePhoto
-      },
+      } : null,
       rating: apt.rating || null
     }));
 

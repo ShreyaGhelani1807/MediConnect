@@ -29,7 +29,7 @@ const bookAppointment = async (req, res) => {
 
     // Check if doctor exists and is accepting patients
     const doctor = await prisma.doctorProfile.findUnique({
-      where: { id: parseInt(doctorId) }
+      where: { id: String(doctorId) }
     });
 
     if (!doctor) {
@@ -43,8 +43,8 @@ const bookAppointment = async (req, res) => {
     // Check if slot exists and belongs to this doctor
     const timeSlot = await prisma.timeSlot.findFirst({
       where: {
-        id: parseInt(timeSlotId),
-        doctorId: parseInt(doctorId),
+        id: String(timeSlotId),
+        doctorId: String(doctorId),
         isAvailable: true
       }
     });
@@ -62,8 +62,8 @@ const bookAppointment = async (req, res) => {
 
     const existingBooking = await prisma.appointment.findFirst({
       where: {
-        doctorId: parseInt(doctorId),
-        timeSlotId: parseInt(timeSlotId),
+        doctorId: String(doctorId),
+        timeSlotId: String(timeSlotId),
         appointmentDate: {
           gte: startOfDay,
           lte: endOfDay
@@ -82,9 +82,9 @@ const bookAppointment = async (req, res) => {
     const appointment = await prisma.appointment.create({
       data: {
         patientId: patientProfile.id,
-        doctorId: parseInt(doctorId),
+        doctorId: String(doctorId),
         appointmentDate: requestedDate,
-        timeSlotId: parseInt(timeSlotId),
+        timeSlotId: String(timeSlotId),
         status: 'pending',
         reasonForVisit: reasonForVisit || null,
         aiSymptomAnalysis: aiSymptomAnalysis || null,
@@ -127,7 +127,7 @@ const bookAppointment = async (req, res) => {
 // PUT /api/appointments/:id/status
 const updateAppointmentStatus = async (req, res) => {
   try {
-    const appointmentId = parseInt(req.params.id);
+    const appointmentId = String(req.params.id);
     const { status, doctorNotes } = req.body;
 
     const validStatuses = ['confirmed', 'completed', 'cancelled'];
@@ -200,7 +200,7 @@ const updateAppointmentStatus = async (req, res) => {
 // POST /api/appointments/:id/rating
 const rateAppointment = async (req, res) => {
   try {
-    const appointmentId = parseInt(req.params.id);
+    const appointmentId = String(req.params.id);
     const { rating, review } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {

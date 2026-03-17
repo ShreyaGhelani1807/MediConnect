@@ -1,5 +1,5 @@
 const prisma = require('../services/prismaClient');
-const { analyzeSymptoms, generateChecklist } = require('../services/aiService');
+const { analyzeSymptoms, generateChecklist, aiChat } = require('../services/aiService');
 
 // POST /api/ai/analyze-symptoms
 const analyzeSymptomsEndpoint = async (req, res) => {
@@ -151,4 +151,94 @@ const generateChecklistEndpoint = async (req, res) => {
   }
 };
 
-module.exports = { analyzeSymptomsEndpoint, generateChecklistEndpoint };
+// POST /api/ai/chat
+// Multi-turn symptom conversation. Client sends:
+//   { history: [{role, content}], patientAge, patientCity }
+// Max 3 user messages enforced here.
+const chatEndpoint = async (req, res) => {
+  try {
+    const { history } = req.body;
+
+    if (!history || !Array.isArray(history) || history.length === 0) {
+      return res.status(400).json({ error: 'history array is required' });
+    }
+
+    // Count user messages
+    const userMsgCount = history.filter(m => m.role === 'user').length;
+    if (userMsgCount > 3) {
+      return res.status(400).json({ error: 'Maximum 3 messages allowed per conversation' });
+    }
+
+    // Get patient context
+    const user = await prisma.user.findUnique({
+      where:   { id: String(req.user.userId) },
+      include: { patientProfile: true }
+    });
+    const patientAge  = user?.patientProfile?.age;
+    const patientCity = user?.city;
+
+    const isLastTurn = userMsgCount >= 3;
+
+    const aiResponse = await aiChat(history, patientAge, patientCity, isLastTurn);
+
+    // If the AI returned a question, pass it through
+    if (aiResponse.type === 'question') {
+      return res.json({ type: 'question', text: aiResponse.text });
+    }
+
+    // The AI returned a result
+    const aiAnalysis = aiResponse.aiAnalysis;
+
+    // Emergency bypass — return immediately
+    if (aiAnalysis?.emergency?.detected) {
+      return res.json({ type: 'result', isEmergency: true, aiAnalysis, doctors: [] });
+    }
+
+    // Search for matching doctors
+    const primarySpec = aiAnalysis?.doctor_search_query?.primary_specialization;
+    let doctors = [];
+
+    if (primarySpec) {
+      doctors = await prisma.doctorProfile.findMany({
+        where: {
+          specialization:      primarySpec,
+          isAcceptingPatients: true,
+          verificationStatus:  'approved',
+          ...(patientCity && { city: { equals: patientCity, mode: 'insensitive' } })
+        },
+        include: { user: true, timeSlots: { where: { isAvailable: true } } },
+        orderBy: { averageRating: 'desc' },
+        take: 6
+      });
+
+      if (doctors.length === 0 && patientCity) {
+        doctors = await prisma.doctorProfile.findMany({
+          where: { specialization: primarySpec, isAcceptingPatients: true, verificationStatus: 'approved' },
+          include: { user: true, timeSlots: { where: { isAvailable: true } } },
+          orderBy: { averageRating: 'desc' },
+          take: 6
+        });
+      }
+    }
+
+    const formattedDoctors = doctors.map(doc => ({
+      id: doc.id, name: doc.user.name, specialization: doc.specialization,
+      qualifications: doc.qualifications, experienceYears: doc.experienceYears,
+      consultationFee: doc.consultationFee, city: doc.city,
+      clinicAddress: doc.clinicAddress, profilePhoto: doc.profilePhoto,
+      averageRating: doc.averageRating, totalReviews: doc.totalReviews,
+      isAcceptingPatients: doc.isAcceptingPatients, availableSlots: doc.timeSlots.length
+    }));
+
+    return res.json({ type: 'result', isEmergency: false, aiAnalysis, doctors: formattedDoctors });
+
+  } catch (error) {
+    console.error('AI chat error:', error);
+    if (error instanceof SyntaxError) {
+      return res.status(500).json({ error: 'AI response parsing failed. Please try again.' });
+    }
+    res.status(500).json({ error: 'AI chat failed. Please try again.' });
+  }
+};
+
+module.exports = { analyzeSymptomsEndpoint, generateChecklistEndpoint, chatEndpoint };
