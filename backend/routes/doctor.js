@@ -7,7 +7,8 @@ const {
   getTodayAppointments,
   getAllAppointments,
   getPatientById,
-  getAnalytics
+  getAnalytics,
+  changePassword
 } = require('../controllers/doctorController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
@@ -17,6 +18,7 @@ router.use(restrictTo('doctor'));
 
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
+router.put('/change-password', changePassword);
 router.put('/slots', updateSlots);
 router.get('/appointments/today', getTodayAppointments);
 router.get('/appointments/all', getAllAppointments);

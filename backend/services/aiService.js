@@ -147,4 +147,68 @@ Return ONLY the JSON. No other text.`;
   return parsed;
 };
 
-module.exports = { analyzeSymptoms, generateChecklist };
+// Multi-turn AI chat — returns {type: 'question', text} or {type: 'result', ...}
+// history = [{role:'user'|'assistant', content: string}]
+const aiChat = async (history, patientAge, patientCity, isLastTurn) => {
+  const systemPrompt = `You are MediConnect's medical triage AI assistant for Indian patients.
+
+You are conducting a structured conversation to understand a patient's symptoms before recommending a specialist.
+
+Your job:
+1. Ask ONE focused follow-up question per turn to gather more detail (duration, severity, location, triggers, associated symptoms).
+2. After gathering enough information — OR if the user has sent their ${isLastTurn ? 'FINAL (3rd)' : ''} message — return the full structured analysis immediately.
+3. If you detect emergency symptoms (severe chest pain, stroke, severe difficulty breathing, unconsciousness) at ANY point — return the result immediately with emergency: { detected: true }.
+
+Response format:
+You MUST respond with ONLY a valid JSON object. No markdown, no explanation.
+
+Either a question:
+{ "type": "question", "text": "Your single focused question here" }
+
+Or a complete analysis result:
+{
+  "type": "result",
+  "aiAnalysis": {
+    "symptom_summary": "...",
+    "primary_recommendation": { "specialization": "...", "confidence": "high|medium|low", "reasoning": "..." },
+    "secondary_recommendation": { "specialization": "...or null", "reasoning": "...or null" },
+    "urgency": { "level": "routine|soon|urgent|emergency", "color": "green|yellow|orange|red", "message": "..." },
+    "red_flags": [],
+    "emergency": { "detected": false, "message": null },
+    "pre_consultation": { "tell_doctor": [], "bring_documents": [], "questions_to_ask": [] },
+    "doctor_search_query": { "primary_specialization": "...", "secondary_specialization": "...or null", "urgency_filter": "available_today|available_this_week|any" }
+  }
+}
+
+Patient context:
+- Age: ${patientAge || 'Not specified'}
+- City: ${patientCity || 'Not specified'}
+
+Valid specializations: Cardiologist, Dermatologist, Orthopedist, Neurologist, Gynecologist, Pediatrician, General Physician, Psychiatrist, Ophthalmologist, ENT Specialist.
+
+${isLastTurn ? 'IMPORTANT: This is the patient\'s FINAL message. You MUST return a "result" type response now, not a question.' : ''}
+
+Return ONLY the JSON. No other text.`;
+
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...history
+    ],
+    temperature: 0.3,
+    max_tokens: 1800,
+    response_format: { type: 'json_object' }
+  });
+
+  const rawText = response.choices[0].message.content;
+  const cleaned = rawText
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim();
+
+  return JSON.parse(cleaned);
+};
+
+module.exports = { analyzeSymptoms, generateChecklist, aiChat };

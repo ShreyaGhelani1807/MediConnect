@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const prisma = require('../services/prismaClient');
+const { sendForgotPasswordEmail } = require('../services/emailService');
 
 const generateToken = (userId, role) =>
   jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -149,4 +150,57 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getMe };
+// POST /api/auth/forgot-password
+const forgotPassword = async (req, res) => {
+  // Always return the SAME generic response — never reveal whether email exists
+  const GENERIC = { message: 'If that email is registered, a temporary password has been sent.' };
+
+  try {
+    const { email } = req.body;
+
+    if (!email) return res.status(400).json({ error: 'email is required' });
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      // Still return 200 — don't reveal whether email exists
+      return res.json(GENERIC);
+    }
+
+    // Generate 10-char temp password: 1 upper + 1 lower + 1 digit + 1 special + 6 random
+    const upper   = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+    const lower   = 'abcdefghjkmnpqrstuvwxyz';
+    const digits  = '23456789';
+    const special = '@#$!';
+    const all     = upper + lower + digits + special;
+
+    let tempPwd = '';
+    tempPwd += upper[Math.floor(Math.random() * upper.length)];
+    tempPwd += lower[Math.floor(Math.random() * lower.length)];
+    tempPwd += digits[Math.floor(Math.random() * digits.length)];
+    tempPwd += special[Math.floor(Math.random() * special.length)];
+    for (let i = 0; i < 6; i++) tempPwd += all[Math.floor(Math.random() * all.length)];
+
+    // Fisher-Yates shuffle
+    const arr = tempPwd.split('');
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    const newPassword = arr.join('');
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { email }, data: { passwordHash } });
+
+    await sendForgotPasswordEmail({ to: email, name: user.name, tempPassword: newPassword });
+
+    return res.json(GENERIC);
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    // Still return generic to avoid leaking info
+    return res.json(GENERIC);
+  }
+};
+
+module.exports = { register, login, getMe, forgotPassword };
