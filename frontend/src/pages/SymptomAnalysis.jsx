@@ -90,18 +90,18 @@ function DoctorCard({ doc, i, onBook }) {
       style={{ background: P.white, borderRadius: 18, padding: '20px', border: `1px solid ${P.border}`, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
         <div style={{ width: 48, height: 48, borderRadius: 15, background: `linear-gradient(135deg, ${P.navy}, ${P.navyLt})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: 'white', flexShrink: 0 }}>
-          {doctorName[0] || 'D'}
+          {doc.name?.[0] || 'D'}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 15, fontWeight: 800, color: P.ink, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doctorName}</p>
-          <p style={{ fontSize: 13, color: P.teal, fontWeight: 600, margin: '0 0 4px' }}>Specialization: {doctorSpecialization}</p>
+          <p style={{ fontSize: 15, fontWeight: 800, color: P.ink, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</p>
+          <p style={{ fontSize: 13, color: P.teal, fontWeight: 600, margin: '0 0 4px' }}>{doc.specialization}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Star size={12} fill={P.amber} color={P.amber} />
               <span style={{ fontSize: 12, fontWeight: 700, color: P.sub }}>{doc.averageRating?.toFixed(1) || 'New'}</span>
             </div>
             <span style={{ fontSize: 12, color: P.muted }}>·</span>
-            <span style={{ fontSize: 12, color: P.muted }}>{doctorExperience || '0'} yrs exp</span>
+            <span style={{ fontSize: 12, color: P.muted }}>{doc.experienceYears} yrs exp</span>
             <span style={{ fontSize: 12, color: P.muted }}>·</span>
             <span style={{ fontSize: 12, color: P.muted, display: 'flex', alignItems: 'center', gap: 3 }}>
               <MapPin size={10} />{doc.city || 'N/A'}
@@ -280,8 +280,7 @@ export default function SymptomAnalysis() {
 
   const handleReset = () => { setSymptoms(''); setPhase('input'); setResult(null); setError(''); };
 
-  const analysis = result?.aiAnalysis || result?.analysis || {};
-  const urg = analysis?.urgency?.level || analysis?.urgency_level || 'routine';
+  const urg = result?.aiAnalysis?.urgency?.level || 'routine';
   const urgStyle = URGENCY[urg] || URGENCY.routine;
 
   return (
@@ -366,7 +365,7 @@ export default function SymptomAnalysis() {
                   </motion.div>
                   <h2 style={{ fontSize: 24, fontWeight: 900, color: '#DC2626', letterSpacing: '-0.7px', margin: '0 0 10px' }}>Emergency Detected</h2>
                   <p style={{ fontSize: 15, color: P.sub, lineHeight: 1.65, maxWidth: 440, margin: '0 auto' }}>
-                    {result?.emergencyMessage || 'Your symptoms may indicate a life-threatening condition. Please seek emergency care immediately.'}
+                    {result?.aiAnalysis?.emergency?.message || 'Your symptoms may indicate a life-threatening condition. Please seek emergency care immediately.'}
                   </p>
                 </div>
                 <div style={{ background: '#FFF0F0', border: '1.5px solid rgba(220,38,38,0.2)', borderRadius: 18, padding: '24px', marginBottom: 20 }}>
@@ -377,7 +376,7 @@ export default function SymptomAnalysis() {
                     Do not wait. Do not drive yourself. Call emergency services or have someone take you to the nearest ER right now.
                   </p>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {(result?.analysis?.red_flags || []).map(f => (
+                    {(result?.aiAnalysis?.red_flags || []).map(f => (
                       <span key={f} style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 7, background: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.15)' }}>⚠ {f}</span>
                     ))}
                   </div>
@@ -409,19 +408,19 @@ export default function SymptomAnalysis() {
                 <div style={{ background: P.sky, borderRadius: 16, padding: '18px 20px', marginBottom: 20 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: P.muted, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>Recommended Specialist</p>
                   <p style={{ fontSize: 24, fontWeight: 900, color: P.ink, letterSpacing: '-0.8px', margin: '0 0 6px' }}>
-                    {analysis?.primary_recommendation?.specialization || analysis?.recommended_specialist || analysis?.doctor_search_query?.primary_specialization}
+                    {result.aiAnalysis?.primary_recommendation?.specialization || result.aiAnalysis?.doctor_search_query?.primary_specialization}
                   </p>
                   <p style={{ fontSize: 13, color: P.sub, margin: 0, lineHeight: 1.6 }}>
-                    {analysis?.primary_recommendation?.reasoning || analysis?.reasoning}
+                    {result.aiAnalysis?.primary_recommendation?.reasoning}
                   </p>
                 </div>
 
                 {/* Red flags */}
-                {analysis?.red_flags?.length > 0 && (
+                {result.aiAnalysis?.red_flags?.length > 0 && (
                   <div style={{ marginBottom: 20 }}>
                     <p style={{ fontSize: 12, fontWeight: 700, color: P.muted, textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 10px' }}>Red Flags Detected</p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {analysis.red_flags.map(f => (
+                      {result.aiAnalysis.red_flags.map(f => (
                         <span key={f} style={{ fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 8, background: 'rgba(232,96,76,0.06)', color: P.coral, border: `1px solid ${P.coral}15` }}>⚠ {f}</span>
                       ))}
                     </div>
@@ -434,10 +433,10 @@ export default function SymptomAnalysis() {
                     <p style={{ fontSize: 12, color: P.muted, margin: '0 0 4px', fontWeight: 600 }}>AI Confidence</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 100, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${analysis?.primary_recommendation?.confidence === 'high' ? 90 : analysis?.primary_recommendation?.confidence === 'medium' ? 75 : analysis?.confidence_score || 85}%` }} transition={{ duration: 0.8 }}
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${result.aiAnalysis?.primary_recommendation?.confidence === 'high' ? 92 : result.aiAnalysis?.primary_recommendation?.confidence === 'medium' ? 72 : 55}%` }} transition={{ duration: 0.8 }}
                           style={{ height: '100%', background: `linear-gradient(90deg, ${P.teal}, ${P.tealDk})`, borderRadius: 3 }} />
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>{analysis?.primary_recommendation?.confidence ? analysis.primary_recommendation.confidence.toUpperCase() : `${analysis?.confidence_score || 85}%`}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: P.ink }}>{result.aiAnalysis?.primary_recommendation?.confidence === 'high' ? 92 : result.aiAnalysis?.primary_recommendation?.confidence === 'medium' ? 72 : 55}%</span>
                     </div>
                   </div>
                   <button onClick={handleReset}

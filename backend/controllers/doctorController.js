@@ -1,4 +1,5 @@
-const prisma = require('../services/prismaClient');
+const prisma  = require('../services/prismaClient');
+const bcrypt  = require('bcryptjs');
 
 // GET /api/doctor/profile
 const getProfile = async (req, res) => {
@@ -235,7 +236,7 @@ const getAllAppointments = async (req, res) => {
 const getPatientById = async (req, res) => {
   try {
     const patientProfile = await prisma.patientProfile.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         user: true,
         appointments: {
@@ -357,6 +358,41 @@ const getAnalytics = async (req, res) => {
   }
 };
 
+// PUT /api/doctor/change-password
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'currentPassword and newPassword are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: req.user.userId },
+      data:  { passwordHash }
+    });
+
+    res.json({ message: 'Password changed successfully' });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -364,5 +400,6 @@ module.exports = {
   getTodayAppointments,
   getAllAppointments,
   getPatientById,
-  getAnalytics
+  getAnalytics,
+  changePassword
 };

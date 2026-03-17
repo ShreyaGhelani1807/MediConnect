@@ -46,6 +46,7 @@ export const patientAPI = {
 export const doctorAPI = {
   getProfile:           ()     => api.get('/doctor/profile'),
   updateProfile:        (data) => api.put('/doctor/profile', data),
+  changePassword:       (data) => api.put('/doctor/change-password', data),
   updateSlots:          (data) => api.put('/doctor/slots', data),
   getTodayAppointments: ()     => api.get('/doctor/appointments/today'),
   getAllAppointments:   ()     => api.get('/doctor/appointments/all'),
@@ -55,8 +56,8 @@ export const doctorAPI = {
 
 // ─── Doctors (public) ────────────────────────────────────
 export const doctorsAPI = {
-  search:  (params) => api.get('/doctors/search', { params }),
-  getById: (id)     => api.get(`/doctors/${id}`),
+  search:  (params)   => api.get('/doctors/search', { params }),
+  getById: (id)       => api.get(`/doctors/${id}`),
   getSlots:(id, date) => api.get(`/doctors/${id}/slots`, { params: { date } }),
 };
 
@@ -64,27 +65,25 @@ export const doctorsAPI = {
 export const aiAPI = {
   analyzeSymptoms:   (data) => api.post('/ai/analyze-symptoms', data),
   generateChecklist: (data) => api.post('/ai/generate-checklist', data),
+  chat:              (data) => api.post('/ai/chat', data),
 };
 
 // ─── Appointments ────────────────────────────────────────
 export const appointmentAPI = {
-  book:         (data)       => api.post('/appointments/book', data),
-  updateStatus: (id, data)   => api.put(`/appointments/${id}/status`, data),
-  rate:         (id, data)   => api.post(`/appointments/${id}/rating`, data),
+  book:         (data)     => api.post('/appointments/book', data),
+  updateStatus: (id, data) => api.put(`/appointments/${id}/status`, data),
+  rate:         (id, data) => api.post(`/appointments/${id}/rating`, data),
+};
+
+// ─── Prescriptions ───────────────────────────────────────
+export const prescriptionAPI = {
+  addPrescription:        (appointmentId, data) => api.post(`/prescriptions/appointments/${appointmentId}`, data),
+  getByAppointment:       (appointmentId)       => api.get(`/prescriptions/appointments/${appointmentId}`),
+  getAllPatient:           ()                    => api.get('/prescriptions/patient/all'),
 };
 
 export default api;
 
-// ─── Admin ────────────────────────────────────────────────
-export const adminAPI = {
-  login:         (data)         => adminApi.post('/admin/login', data),
-  getMe:         ()             => adminApi.get('/admin/me'),
-  getStats:      ()             => adminApi.get('/admin/stats'),
-  getDoctors:    (status)       => adminApi.get(`/admin/doctors${status ? `?status=${status}` : ''}`),
-  getDoctorById: (id)           => adminApi.get(`/admin/doctors/${id}`),
-  approveDoctor: (id)           => adminApi.patch(`/admin/doctors/${id}/approve`, {}),
-  rejectDoctor:  (id, reason)   => adminApi.patch(`/admin/doctors/${id}/reject`, { reason }),
-};
 // ─── Separate Admin Axios Instance (bypasses mediconnect_token interceptor) ──
 const adminApi = axios.create({
   baseURL: BASE_URL,
@@ -110,3 +109,14 @@ adminApi.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// ─── Admin ────────────────────────────────────────────────
+export const adminAPI = {
+  login:         (data)         => adminApi.post('/admin/login', data),
+  getMe:         ()             => adminApi.get('/admin/me'),
+  getStats:      ()             => adminApi.get('/admin/stats'),
+  getDoctors:    (status)       => adminApi.get(`/admin/doctors${status ? `?status=${status}` : ''}`),
+  getDoctorById: (id)           => adminApi.get(`/admin/doctors/${id}`),
+  approveDoctor: (id)           => adminApi.patch(`/admin/doctors/${id}/approve`, {}),
+  rejectDoctor:  (id, reason)   => adminApi.patch(`/admin/doctors/${id}/reject`, { reason }),
+};
