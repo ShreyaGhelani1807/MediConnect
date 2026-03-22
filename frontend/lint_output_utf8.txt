@@ -1,0 +1,228 @@
+﻿
+> frontend@0.0.0 lint
+> eslint .
+
+
+D:\Projects\MediConnect\MediConnect\frontend\src\App.jsx
+  1:50  error  'useNavigate' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\components\DoctorLayout.jsx
+    2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        no-unused-vars
+   83:46  error  'Icon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+  181:10  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+  179 |         style={{ height: "100vh" }}
+  180 |       >
+> 181 |         <SidebarContent />
+      |          ^^^^^^^^^^^^^^ This component is created during render
+  182 |
+  183 |         {/* Collapse toggle */}
+  184 |         <motion.button
+
+   32 |
+   33 |   // ΓöÇΓöÇ Sidebar content (shared between desktop + mobile) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+>  34 |   const SidebarContent = ({ mobile = false }) => (
+      |                          ^^^^^^^^^^^^^^^^^^^^^^^^^
+>  35 |     <div
+      | ^^^^^^^^
+>  36 |       className="flex flex-col h-full"
+      ΓÇª
+      | ^^^^^^^^
+> 166 |     </div>
+      | ^^^^^^^^
+> 167 |   );
+      | ^^^^ The component is created during render here
+  168 |
+  169 |   return (
+  170 |     <div                                                               react-hooks/static-components
+  219:16  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+  217 |               className="fixed left-0 top-0 bottom-0 z-50 w-64 md:hidden"
+  218 |             >
+> 219 |               <SidebarContent mobile />
+      |                ^^^^^^^^^^^^^^ This component is created during render
+  220 |             </motion.aside>
+  221 |           </>
+  222 |         )}
+
+   32 |
+   33 |   // ΓöÇΓöÇ Sidebar content (shared between desktop + mobile) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+>  34 |   const SidebarContent = ({ mobile = false }) => (
+      |                          ^^^^^^^^^^^^^^^^^^^^^^^^^
+>  35 |     <div
+      | ^^^^^^^^
+>  36 |       className="flex flex-col h-full"
+      ΓÇª
+      | ^^^^^^^^
+> 166 |     </div>
+      | ^^^^^^^^
+> 167 |   );
+      | ^^^^ The component is created during render here
+  168 |
+  169 |   return (
+  170 |     <div  react-hooks/static-components
+  317:43  error  'Icon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\components\Layout.jsx
+   2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  88:36  error  'Icon' is defined but never used                                               no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\context\AdminContext.jsx
+  14:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  12 |     const savedToken = localStorage.getItem('admin_token');
+  13 |     if (savedAdmin && savedToken) {
+> 14 |       setAdmin(JSON.parse(savedAdmin));
+     |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  15 |     }
+  16 |     setLoading(false);
+  17 |   }, []);  react-hooks/set-state-in-effect
+  41:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react-refresh/only-export-components
+
+D:\Projects\MediConnect\MediConnect\frontend\src\context\AuthContext.jsx
+  15:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  13 |     const savedToken = localStorage.getItem('mediconnect_token');
+  14 |     if (savedUser && savedToken) {
+> 15 |       setUser(JSON.parse(savedUser));
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  16 |     }
+  17 |     setLoading(false);
+  18 |   }, []);  react-hooks/set-state-in-effect
+  51:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-refresh/only-export-components
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\AppointmentBooking.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\DoctorAnalytics.jsx
+   2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  27:27  error  'Icon' is defined but never used                                               no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\DoctorAppointments.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\DoctorDashboard.jsx
+    2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   35:27  error  'Icon' is defined but never used                                               no-unused-vars
+  674:39  error  'Icon' is defined but never used                                               no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\DoctorDetail.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\DoctorProfile.jsx
+   2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u         no-unused-vars
+   3:8   error  'axios' is defined but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  18:28  error  'Icon' is defined but never used                                                      no-unused-vars
+  95:11  error  'user' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\DoctorProfilePage.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\DoctorSearch.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\ForgotPassword.jsx
+    2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u             no-unused-vars
+   20:24  error  'Icon' is defined but never used                                                          no-unused-vars
+   43:9   error  'navigate' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   59:14  error  'err' is defined but never used                                                           no-unused-vars
+  104:26  error  'Icon' is defined but never used                                                          no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\Landing.jsx
+    1:10  error    'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+  258:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  256 |       t = setTimeout(() => setWT(wT.slice(0, -1)), 45);
+  257 |     } else {
+> 258 |       setWD(false);
+      |       ^^^^^ Avoid calling setState() directly within an effect
+  259 |       setWI((wI + 1) % words.length);
+  260 |     }
+  261 |     return () => clearTimeout(t);  react-hooks/set-state-in-effect
+  262:6   warning  React Hook useEffect has a missing dependency: 'words'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+  502:28  error    'Icon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+  532:44  error    'Icon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+  572:34  error    'Icon' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\Login.jsx
+    2:10   error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   23:24   error  'Icon' is defined but never used                                               no-unused-vars
+   48:145  error  'Icon' is defined but never used                                               no-unused-vars
+  249:26   error  'Icon' is defined but never used                                               no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\PatientAppointments.jsx
+    2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  120:84  error  'e' is defined but never used                                                  no-unused-vars
+  120:86  error  Empty block statement                                                          no-empty
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\PatientDashboard.jsx
+   2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  35:27  error  'Icon' is defined but never used                                               no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\PatientPrescriptions.jsx
+    2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u              no-unused-vars
+  128:42  error  'createdAt' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  252:14  error  'err' is defined but never used                                                            no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\PatientProfile.jsx
+   2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  48:37  error  'Icon' is defined but never used                                               no-unused-vars
+  87:14  error  'err' is defined but never used                                                no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\Register.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\SymptomAnalysis.jsx
+    2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                 no-unused-vars
+   99:9   error  'doctorClinic' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  162:16  error  'e' is defined but never used                                                                 no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\admin\AdminDashboard.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\admin\AdminDoctors.jsx
+   3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  84:11  error  'admin' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\admin\AdminLogin.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\doctor\DoctorAnalytics.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\doctor\DoctorAppointments.jsx
+    2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  132:21  error  'e' is defined but never used                                                  no-unused-vars
+  132:23  error  Empty block statement                                                          no-empty
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\doctor\DoctorDashboard.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\Projects\MediConnect\MediConnect\frontend\src\pages\doctor\DoctorProfile.jsx
+   2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  42:37  error  'Icon' is defined but never used                                               no-unused-vars
+
+Γ£û 67 problems (66 errors, 1 warning)
+
