@@ -8,7 +8,10 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-  }
+  },
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 20000,
 });
 
 const ensureEmailConfig = () => {
@@ -72,7 +75,7 @@ const sendApprovalEmail = async ({ to, doctorName, mediconnectEmail, password })
   };
 
   ensureEmailConfig();
-  await transporter.sendMail(mailOptions);
+  await sendMailWithTimeout(mailOptions);
 };
 
 // ── Rejection Email ────────────────────────────────────────
@@ -125,7 +128,7 @@ const sendRejectionEmail = async ({ to, doctorName, reason }) => {
   };
 
   ensureEmailConfig();
-  await transporter.sendMail(mailOptions);
+  await sendMailWithTimeout(mailOptions);
 };
 
 // ── Forgot Password Email ──────────────────────────────────
@@ -169,7 +172,17 @@ const sendForgotPasswordEmail = async ({ to, name, tempPassword }) => {
     `
   };
   ensureEmailConfig();
-  await transporter.sendMail(mailOptions);
+  await sendMailWithTimeout(mailOptions);
+};
+
+const sendMailWithTimeout = async (mailOptions) => {
+  const timeoutMs = Number(process.env.EMAIL_TIMEOUT_MS || 20000);
+  return Promise.race([
+    transporter.sendMail(mailOptions),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Email send timeout')), timeoutMs)
+    ),
+  ]);
 };
 
 module.exports = { sendApprovalEmail, sendRejectionEmail, sendForgotPasswordEmail };
